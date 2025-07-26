@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider, 
   signOut, 
   onAuthStateChanged,
@@ -26,7 +28,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
 
-  // Google Sign-In
+  // Google Sign-In with fallback to redirect
   const signInWithGoogle = async () => {
     try {
       const provider = new GoogleAuthProvider();
@@ -34,8 +36,30 @@ export const AuthProvider = ({ children }) => {
       provider.addScope('email');
       provider.addScope('profile');
       
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      let result;
+      let user;
+      
+      try {
+        // Try popup first (better UX on desktop)
+        result = await signInWithPopup(auth, provider);
+        user = result.user;
+      } catch (popupError) {
+        console.log('Popup failed, trying redirect:', popupError.code);
+        
+        // If popup fails (especially on mobile), try redirect
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.code === 'auth/cancelled-popup-request') {
+          
+          // Use redirect instead
+          await signInWithRedirect(auth, provider);
+          // The redirect will handle the rest, so we return a pending state
+          return { user: null, error: null, pending: true };
+        } else {
+          // Re-throw other errors to be handled below
+          throw popupError;
+        }
+      }
 
       // Create or update user profile in Firestore
       await createUserProfile(user);
@@ -49,7 +73,37 @@ export const AuthProvider = ({ children }) => {
       return { user, error: null };
     } catch (error) {
       console.error('Google sign-in error:', error);
-      return { user: null, error: error.message };
+      
+      // Handle specific error cases
+      let errorMessage = error.message;
+      
+      switch (error.code) {
+        case 'auth/popup-closed-by-user':
+          errorMessage = 'Sign-in was cancelled. Please try again or use email/password.';
+          break;
+        case 'auth/popup-blocked':
+          errorMessage = 'Pop-up was blocked. Trying alternative sign-in method...';
+          break;
+        case 'auth/cancelled-popup-request':
+          errorMessage = 'Sign-in was cancelled. Please try again.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection and try again.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'This account has been disabled. Please contact support.';
+          break;
+        case 'auth/account-exists-with-different-credential':
+          errorMessage = 'An account already exists with this email. Please sign in with your original method.';
+          break;
+        default:
+          errorMessage = 'Sign-in failed. Please try again or use email/password.';
+      }
+      
+      return { user: null, error: errorMessage };
     }
   };
 
@@ -60,7 +114,34 @@ export const AuthProvider = ({ children }) => {
       return { user: result.user, error: null };
     } catch (error) {
       console.error('Email sign-in error:', error);
-      return { user: null, error: error.message };
+      
+      // Handle specific error cases
+      let errorMessage = error.message;
+      
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'No account found with this email address.';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password. Please try again.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'This account has been disabled. Please contact support.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection and try again.';
+          break;
+        default:
+          errorMessage = 'Sign-in failed. Please check your credentials and try again.';
+      }
+      
+      return { user: null, error: errorMessage };
     }
   };
 
@@ -79,7 +160,31 @@ export const AuthProvider = ({ children }) => {
       return { user, error: null };
     } catch (error) {
       console.error('Email sign-up error:', error);
-      return { user: null, error: error.message };
+      
+      // Handle specific error cases
+      let errorMessage = error.message;
+      
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'An account with this email already exists. Try signing in instead.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Password is too weak. Please use at least 6 characters.';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'Email/password accounts are not enabled. Please contact support.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection and try again.';
+          break;
+        default:
+          errorMessage = 'Account creation failed. Please try again.';
+      }
+      
+      return { user: null, error: errorMessage };
     }
   };
 
@@ -198,6 +303,29 @@ export const AuthProvider = ({ children }) => {
       }
       setLoading(false);
     });
+
+    // Handle redirect result for Google Sign-In
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          const user = result.user;
+          // Create or update user profile in Firestore
+          await createUserProfile(user);
+          
+          // Request notification permission
+          const fcmToken = await requestNotificationPermission();
+          if (fcmToken) {
+            await updateUserFCMToken(user.uid, fcmToken);
+          }
+        }
+      } catch (error) {
+        console.error('Redirect result error:', error);
+        // Handle redirect errors silently or show a toast notification
+      }
+    };
+
+    handleRedirectResult();
 
     return unsubscribe;
   }, []);
