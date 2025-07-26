@@ -50,7 +50,7 @@ const BottomNavigation = ({ items, showAddMenu, setShowAddMenu, addMenuItems }) 
       )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 z-50 transition-colors duration-300">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-around py-2">
             {items.map((item) => {
@@ -65,10 +65,10 @@ const BottomNavigation = ({ items, showAddMenu, setShowAddMenu, addMenuItems }) 
                     item.isAction
                       ? showAddMenu
                         ? 'bg-red-500 text-white scale-110'
-                        : 'bg-dental-primary text-white scale-110'
+                        : 'bg-primary text-white scale-110'
                       : active
-                      ? 'text-dental-primary bg-blue-50'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'text-primary bg-primary-50 dark:bg-primary-900/30'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
                 >
                   {item.isAction && showAddMenu ? (
