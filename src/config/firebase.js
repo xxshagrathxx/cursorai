@@ -7,13 +7,12 @@ import { getAnalytics } from 'firebase/analytics';
 // Your Firebase configuration
 // Replace these with your actual Firebase project credentials
 const firebaseConfig = {
-  apiKey: "your-api-key-here",
-  authDomain: "your-project-id.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "your-sender-id",
-  appId: "your-app-id",
-  measurementId: "your-measurement-id" // Optional, for Analytics
+  apiKey: "AIzaSyA-ArIwmJG4_Qlh4wGw-AZkbPt0omfRU4Y",
+  authDomain: "followups-a83a7.firebaseapp.com",
+  projectId: "followups-a83a7",
+  storageBucket: "followups-a83a7.firebasestorage.app",
+  messagingSenderId: "622370701795",
+  appId: "1:622370701795:web:017cbdcd0d0753612e60d6"
 };
 
 // Initialize Firebase
@@ -60,7 +59,7 @@ export const requestNotificationPermission = async () => {
     if (permission === 'granted') {
       // Get FCM token
       const token = await getToken(messaging, {
-        vapidKey: 'your-vapid-key-here' // Replace with your VAPID key
+        vapidKey: 'r1GJLvmXEioFq1dLBXZ3QCylOd4GrvgOdY0GlJbyNME' // Replace with your VAPID key
       });
       console.log('FCM Token:', token);
       return token;

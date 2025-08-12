@@ -30,6 +30,40 @@ export default {
           600: 'color-mix(in srgb, var(--color-secondary) 80%, black)',
         },
         accent: 'var(--color-accent)',
+        // Status colors to match index.css
+        red: {
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          800: '#991b1b',
+          900: '#7f1d1d',
+        },
+        yellow: {
+          100: '#fefcbf',
+          300: '#fde68a',
+          800: '#a16207',
+          900: '#854d0e',
+        },
+        green: {
+          100: '#dcfce7',
+          300: '#86efac',
+          800: '#166534',
+          900: '#14532d',
+        },
+        gray: {
+          50: '#f9fafb',
+          100: '#f3f4f6',
+          200: '#e5e7eb',
+          300: '#d1d5db',
+          400: '#9ca3af',
+          600: '#4b5563',
+          900: '#111827',
+        },
+        slate: {
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+        },
         // Keep existing dental colors as fallback
         dental: {
           primary: '#2563eb',
@@ -39,7 +73,7 @@ export default {
           danger: '#ef4444',
           light: '#f8fafc',
           dark: '#1e293b',
-        }
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
