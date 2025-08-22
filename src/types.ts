@@ -27,20 +27,21 @@ export interface Patient {
 
 // Represents a follow-up document in the Firestore 'followups' collection
 export interface FollowUp {
-  id: string; // Firestore document ID
-  patientId: string; // Reference to patient.id
-  userId: string; // Reference to user ID
-  type: string; // Type of follow-up (e.g., 'post-treatment')
-  scheduledDate: string; // ISO date string (e.g., '2025-07-15')
-  scheduledTime?: string; // Optional time of follow-up (e.g., 'morning')
-  notes?: string; // Additional notes (optional)
-  priority: 'normal' | 'high' | 'urgent'; // Priority level
-  sendReminder: boolean; // Whether to send a reminder
-  status: 'pending' | 'overdue' | 'completed'; // Follow-up status
-  createdAt: Timestamp; // Firestore Timestamp for creation
-  updatedAt: Timestamp; // Firestore Timestamp for last update
-  completedAt?: string | null; // ISO date string when completed or null
-  completionNotes?: string | null; // Notes on completion (optional)
+  id: string;
+  patientId: string;
+  userId: string;
+  type: string;
+  notes: string;
+  scheduledDate: string;
+  scheduledTime?: string;
+  priority: 'normal' | 'high' | 'urgent';
+  sendReminder: boolean;
+  status: 'pending' | 'completed' | 'overdue';
+  createdAt: any; // Firestore Timestamp
+  updatedAt: any; // Firestore Timestamp
+  completedAt?: any; // Firestore Timestamp
+  completionNotes?: string;
+  isRead: boolean; // NEW: Add this field
 }
 
 // Represents a treatment document in the Firestore 'treatments' collection

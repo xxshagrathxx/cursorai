@@ -4,6 +4,7 @@ import { ArrowLeft, Bell, User, Calendar, FileText, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { followUpService, patientService } from '../services/firestoreService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { useToast } from '../components/Toast';
 import { Patient, FollowUp } from '../types';
 import { formatDate, getNextFollowUpDate } from '../utils/dateUtils';
@@ -25,6 +26,7 @@ const AddFollowUp = () => {
   const location = useLocation();
   const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { refreshNotifications } = useNotifications(); // NEW: Import and use
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,7 +115,7 @@ const AddFollowUp = () => {
       } else {
         console.log('Follow-up created successfully, id:', id);
         showSuccess('Follow-up scheduled successfully!');
-        // Navigate back to PatientDetail if preselected, else to FollowUps
+        refreshNotifications(); // NEW: Refresh notifications after creation
         navigate(preselectedPatientId ? `/patients/${preselectedPatientId}` : '/followups');
       }
     } catch (error) {

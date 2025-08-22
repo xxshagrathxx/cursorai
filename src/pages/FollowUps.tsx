@@ -1,9 +1,9 @@
-// FollowUps.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Filter, Search } from 'lucide-react';
 import { followUpService, patientService } from '../services/firestoreService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { useToast } from '../components/Toast';
 import { FollowUp, Patient } from '../types';
 import { formatDate } from '../utils/dateUtils';
@@ -16,6 +16,7 @@ const FollowUps = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { showError, showSuccess } = useToast();
+  const { refreshNotifications } = useNotifications(); // NEW: Import and use
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
@@ -68,6 +69,7 @@ const FollowUps = () => {
       }
       setFollowUps((prev) => prev.map((f) => (f.id === followUpId ? { ...f, ...formData } : f)));
       showSuccess('Follow-up updated successfully!');
+      refreshNotifications(); // NEW: Refresh notifications after update
     } catch (error) {
       const errorMessage = (error as Error).message.includes('permission-denied')
         ? 'You do not have permission to update this follow-up. Please contact support.'
@@ -89,6 +91,7 @@ const FollowUps = () => {
       }
       setFollowUps(prev => prev.filter(f => f.id !== followUpId));
       showSuccess('Follow-up deleted successfully!');
+      refreshNotifications(); // NEW: Refresh notifications after delete
     } catch (error) {
       const errorMessage = (error as Error).message.includes('permission-denied')
         ? 'Permission denied: check Firestore rules'
@@ -96,7 +99,7 @@ const FollowUps = () => {
       showError(errorMessage);
     }
   };
-  
+
   const enrichedFollowUps = followUps.map(followUp => {
     const patient = patients.find(p => p.id === followUp.patientId);
     return {

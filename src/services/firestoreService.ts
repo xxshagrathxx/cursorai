@@ -229,6 +229,7 @@ export const followUpService = {
         updatedAt: serverTimestamp(),
         completedAt: null,
         completionNotes: null,
+        isRead: false,
       };
       const docRef = await addDoc(collection(db, FOLLOWUPS_COLLECTION), followUpData);
       return { id: docRef.id, error: null };
@@ -395,6 +396,26 @@ export const followUpService = {
       }
     );
   },
+
+  async updateOverdueStatus(userId: string): Promise<{ error: string | null }> {
+    try {
+      const { followUps } = await this.getAll(userId);
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const batch = writeBatch(db);
+      followUps.forEach((f) => {
+        if (f.status === 'pending' && f.scheduledDate < today) {
+          batch.update(doc(db, FOLLOWUPS_COLLECTION, f.id), {
+            status: 'overdue',
+            updatedAt: serverTimestamp(),
+          });
+        }
+      });
+      await batch.commit();
+      return { error: null };
+    } catch (error) {
+      return { error: (error as Error).message || 'Failed to update overdue status' };
+    }
+  },
 };
 
 // Treatment CRUD Operations
@@ -488,7 +509,7 @@ export const treatmentService = {
             await updateDoc(patientRef, {
               lastVisit: calculatedLastVisit,
               updatedAt: serverTimestamp(),
-            });
+          });
           }
         } catch (_err) {
           // ignore patient lastVisit update errors
@@ -524,7 +545,7 @@ export const treatmentService = {
           await updateDoc(patientRef, {
             lastVisit: calculatedLastVisit,
             updatedAt: serverTimestamp(),
-          });
+        });
         }
       } catch (_err) {
         // ignore lastVisit update errors
@@ -563,7 +584,7 @@ export const treatmentService = {
           await updateDoc(patientRef, {
             lastVisit: null,
             updatedAt: serverTimestamp(),
-          });
+        });
         }
       } catch (_err) {
         // ignore

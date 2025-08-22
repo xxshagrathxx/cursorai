@@ -3,17 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
 const Login = () => {
   const navigate = useNavigate();
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const { showSuccess, showError, showInfo } = useToast();
-  
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -21,34 +21,65 @@ const Login = () => {
     confirmPassword: ''
   });
 
+  // Register FCM token and create/update user document
+  const registerPushNotifications = async (user) => {
+    try {
+      await PushNotifications.requestPermissions();
+      await PushNotifications.register();
+
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('FCM Token:', token.value);
+        const db = getFirestore();
+        await setDoc(doc(db, 'users', user.uid), {
+          email: user.email,
+          displayName: user.displayName || formData.displayName || 'User',
+          fcmToken: token.value,
+          preferences: {
+            notifications: true,
+            language: 'en',
+            theme: 'light'
+          },
+          role: 'dentist',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        console.log(`User document and FCM token saved for ${user.uid}`);
+      });
+
+      PushNotifications.addListener('registrationError', (err) => {
+        console.error('FCM Registration Error:', err);
+        showError('Failed to register for notifications');
+      });
+    } catch (err) {
+      console.error('Push Notification Setup Error:', err);
+      showError('Failed to set up notifications');
+    }
+  };
+
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-    // Clear error when user starts typing
     if (error) setError('');
   };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
-    
     const { user, error: authError, pending } = await signInWithGoogle();
-    
     if (authError) {
       setError(authError);
       showError(authError);
       setLoading(false);
     } else if (user) {
+      await registerPushNotifications(user);
       showSuccess('Successfully signed in with Google!');
       navigate('/');
       setLoading(false);
     } else if (pending) {
-      // Redirect is in progress, keep loading state
       showInfo('Redirecting to Google Sign-In...');
       setError('Redirecting to Google Sign-In...');
-      // Don't set loading to false here as redirect is happening
     } else {
       setLoading(false);
     }
@@ -59,7 +90,6 @@ const Login = () => {
     setLoading(true);
     setError('');
 
-    // Validation
     if (!formData.email || !formData.password) {
       setError('Please fill in all required fields');
       setLoading(false);
@@ -72,13 +102,11 @@ const Login = () => {
         setLoading(false);
         return;
       }
-      
       if (formData.password !== formData.confirmPassword) {
         setError('Passwords do not match');
         setLoading(false);
         return;
       }
-
       if (formData.password.length < 6) {
         setError('Password must be at least 6 characters');
         setLoading(false);
@@ -94,6 +122,7 @@ const Login = () => {
       if (authError) {
         setError(authError);
       } else if (user) {
+        await registerPushNotifications(user);
         navigate('/');
       }
     } else {
@@ -105,6 +134,7 @@ const Login = () => {
       if (authError) {
         setError(authError);
       } else if (user) {
+        await registerPushNotifications(user);
         navigate('/');
       }
     }
@@ -115,7 +145,6 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
-        {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
             <div className="w-8 h-8 bg-white rounded-full"></div>
@@ -127,15 +156,12 @@ const Login = () => {
             {isSignUp ? 'Create your account' : 'Sign in to your account'}
           </p>
         </div>
-
-        {/* Auth Form */}
         <div className="card mb-6">
           {error && (
             <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg">
               <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
             </div>
           )}
-
           <form onSubmit={handleEmailAuth} className="space-y-4">
             {isSignUp && (
               <div>
@@ -157,7 +183,6 @@ const Login = () => {
                 </div>
               </div>
             )}
-
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email Address
@@ -176,7 +201,6 @@ const Login = () => {
                 />
               </div>
             </div>
-
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Password
@@ -203,7 +227,6 @@ const Login = () => {
                 </button>
               </div>
             </div>
-
             {isSignUp && (
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -224,7 +247,6 @@ const Login = () => {
                 </div>
               </div>
             )}
-
             <button
               type="submit"
               className="w-full btn-primary"
@@ -240,7 +262,6 @@ const Login = () => {
               )}
             </button>
           </form>
-
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -252,7 +273,6 @@ const Login = () => {
                 </span>
               </div>
             </div>
-
             <button
               onClick={handleGoogleSignIn}
               className="w-full mt-4 btn-secondary flex items-center justify-center"
@@ -289,8 +309,6 @@ const Login = () => {
             </button>
           </div>
         </div>
-
-        {/* Toggle Sign In/Sign Up */}
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-400">
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
@@ -312,8 +330,6 @@ const Login = () => {
             </button>
           </p>
         </div>
-
-        {/* Help Text */}
         {error && error.includes('cancelled') && (
           <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
             <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
@@ -326,8 +342,6 @@ const Login = () => {
             </ul>
           </div>
         )}
-
-        {/* Demo Credentials */}
         <div className="mt-8 p-4 bg-gray-100 dark:bg-slate-700 rounded-lg">
           <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
             Demo Credentials

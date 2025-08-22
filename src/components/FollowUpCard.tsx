@@ -1,8 +1,8 @@
-// components/FollowUpCard.tsx
 import React, { useState } from 'react';
 import { Phone, Edit, Trash2, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { FollowUp } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { useToast } from './Toast';
 import { formatDate } from '../utils/dateUtils';
 import FollowUpEditForm from './FollowUpEditForm';
@@ -18,6 +18,7 @@ const FollowUpCard: React.FC<FollowUpCardProps> = ({ followUp, onUpdate, onDelet
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { showError } = useToast();
+  const { refreshNotifications } = useNotifications(); // NEW: Import and use
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
 
@@ -50,8 +51,8 @@ const FollowUpCard: React.FC<FollowUpCardProps> = ({ followUp, onUpdate, onDelet
       setShowDeleteModal(null);
       return;
     }
-    // Let parent handle Firestore delete
     onDelete(followUp.id);
+    refreshNotifications(); // NEW: Refresh notifications after deletion
     setShowDeleteModal(null);
   };
 
@@ -61,6 +62,7 @@ const FollowUpCard: React.FC<FollowUpCardProps> = ({ followUp, onUpdate, onDelet
       completedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString() // REQUIRED by rules
     });
+    refreshNotifications(); // NEW: Refresh notifications after marking complete
   };
 
   return (

@@ -1,0 +1,24 @@
+{
+  "platforms": {
+    "android": {
+      "icon": {
+        "source": "resources/icon.png",
+        "background_color": "#FFFFFF"
+      },
+      "splash": {
+        "source": "resources/splash.png",
+        "background_color": "#FFFFFF"
+      }
+    },
+    "ios": {
+      "icon": {
+        "source": "resources/icon.png",
+        "background_color": "#FFFFFF"
+      },
+      "splash": {
+        "source": "resources/splash.png",
+        "background_color": "#FFFFFF"
+      }
+    }
+  }
+}
