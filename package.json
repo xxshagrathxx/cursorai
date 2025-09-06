@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@awesome-cordova-plugins/onesignal": "^8.1.0",
+    "@capacitor-community/admob": "^6.2.0",
     "@capacitor-community/http": "^1.4.1",
     "@capacitor-firebase/app": "^7.3.0",
     "@capacitor-firebase/authentication": "^7.3.0",

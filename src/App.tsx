@@ -12,6 +12,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { isSameDay, setHours, setMinutes, setSeconds, addDays } from 'date-fns';
 import { followUpService } from './services/firestoreService';
 import { Http } from '@capacitor-community/http';
+import { AdMob, BannerAdOptions, BannerAdSize, BannerAdPosition, BannerAdPluginEvents, AdMobBannerSize, AdmobConsentStatus, AdmobConsentDebugGeography } from '@capacitor-community/admob';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -60,6 +61,58 @@ const AppContent: React.FC = () => {
     const isNative = !!(window as any).Capacitor?.isNativePlatform;
     if (!isNative) return;
 
+    const initAdMob = async () => {
+      try {
+        // Initialize AdMob
+        await AdMob.initialize();
+
+        // Request tracking authorization (for personalized ads)
+        const trackingInfo = await AdMob.trackingAuthorizationStatus();
+        if (trackingInfo.status === 'notDetermined') {
+          await AdMob.requestTrackingAuthorization();
+        }
+
+        // Handle consent form (GDPR/UMP)
+        const consentInfo = await AdMob.requestConsentInfo({
+          // debugGeography: AdmobConsentDebugGeography.EEA, // Remove in production
+          // testDeviceIdentifiers: [], // Add your device ID from logcat
+        });
+
+        if (consentInfo.isConsentFormAvailable && consentInfo.status === AdmobConsentStatus.REQUIRED) {
+          await AdMob.showConsentForm();
+        }
+      } catch (error) {
+        console.error('AdMob init error:', error);
+      }
+    };
+
+    const showBannerAd = async () => {
+      try {
+        // Event listeners for banner ad
+        AdMob.addListener(BannerAdPluginEvents.Loaded, () => console.log('Banner ad loaded'));
+        AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: any) => console.error('Banner ad failed to load:', error));
+        AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: AdMobBannerSize) => console.log('Banner ad size changed:', size));
+
+        const options: BannerAdOptions = {
+          adId: 'ca-app-pub-7817676381268867/6401556466', // Test ID; replace with real
+          adSize: BannerAdSize.ADAPTIVE_BANNER,
+          position: BannerAdPosition.TOP_CENTER,
+          margin: 0,
+          isTesting: false, // Set to false in production
+          npa: false, // Non-personalized ads if consent denied
+        };
+
+        await AdMob.showBanner(options);
+
+        // Return cleanup for banner
+        return () => {
+          AdMob.removeBanner();
+        };
+      } catch (error) {
+        console.error('Banner ad error:', error);
+      }
+    };
+
     const initPushNotifications = async () => {
       try {
         // Initialize OneSignal
@@ -86,8 +139,8 @@ const AppContent: React.FC = () => {
         OneSignal.Notifications.addForegroundWillDisplayListener((event) => {
           const notification = event.getNotification();
           console.log('Foreground notification received:', notification);
-          event.preventDefault(); // Allow customization if needed
-          event.getNotification().display(); // Display the notification
+          event.preventDefault();
+          event.getNotification().display();
         });
 
         // Handle notification clicks
@@ -112,7 +165,7 @@ const AppContent: React.FC = () => {
           // Schedule for 11:30 AM (user's local time)
           let scheduledTime = setHours(setMinutes(setSeconds(now, 0), 5), 13);
           if (now > scheduledTime) {
-            scheduledTime = addDays(scheduledTime, 1); // Next day if time has passed
+            scheduledTime = addDays(scheduledTime, 1);
           }
           console.log('DEBUG: Scheduled time:', scheduledTime.toISOString());
 
@@ -170,13 +223,13 @@ const AppContent: React.FC = () => {
               en: `You have ${todayFollowUps.length} follow-up${todayFollowUps.length > 1 ? 's' : ''} today!`,
             },
             headings: { en: 'Daily Follow-up Reminder' },
-            include_aliases: { external_id: [currentUser.uid] }, // Target only this user
-            delayed_option: 'timezone', // Deliver in user's local timezone
-            delivery_time_of_day: '11:30', // 11:30 AM local time
+            include_aliases: { external_id: [currentUser.uid] },
+            delayed_option: 'timezone',
+            delivery_time_of_day: '11:30',
             android_accent_color: '#FF5722',
-            android_sound: 'dentaldrill', // Ensure file exists in res/raw
+            android_sound: 'dentaldrill',
             android_vibrate: true,
-            data: { route: '/followups' }, // For click handling
+            data: { route: '/followups' },
           };
           console.log('DEBUG: Notification content prepared:', notificationContent);
 
@@ -205,7 +258,7 @@ const AppContent: React.FC = () => {
         };
         CapacitorApp.addListener('appStateChange', handleAppStateChange);
 
-        // Cleanup listener on unmount
+        // Cleanup listeners on unmount
         return () => {
           CapacitorApp.removeAllListeners();
         };
@@ -214,7 +267,21 @@ const AppContent: React.FC = () => {
       }
     };
 
+    let bannerCleanup: (() => void) | undefined;
+
+    if (currentUser) {
+      initAdMob();
+      showBannerAd().then((cleanup) => {
+        bannerCleanup = cleanup;
+      });
+    }
+
     initPushNotifications();
+
+    // Cleanup for AdMob and notifications
+    return () => {
+      if (bannerCleanup) bannerCleanup();
+    };
   }, [navigate, currentUser]);
 
   const navigationItems: NavigationItem[] = [
@@ -232,6 +299,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-20 transition-colors duration-300">
+      {currentUser && <div style={{ height: '50px' }} />}
       <TopBar />
       <main className="px-4 py-6 max-w-md mx-auto">
         <Routes>

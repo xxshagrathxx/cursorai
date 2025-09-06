@@ -6,4 +6,5 @@
     <string name="custom_url_scheme">com.binbug.followups</string>
     <string name="channel_name">Follow-ups Notifications</string>
     <string name="channel_description">Notifications for daily follow-up reminders</string>
+    <string name="admob_app_id">ca-app-pub-7817676381268867~1620034892</string>
 </resources>
